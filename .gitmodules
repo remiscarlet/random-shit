@@ -1,0 +1,3 @@
+[submodule "flute_finder/secrets"]
+	path = flute_finder/secrets
+	url = git@github.com:remiscarlet/random-shit_secrets.git
