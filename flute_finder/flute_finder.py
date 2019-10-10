@@ -15,7 +15,9 @@ import secrets.craigslist_secrets as secrets
 import craigslist
 
 
-os.chdir("/tmp/")
+if not os.path.isdir(secrets.ROOT_DIR):
+    os.makedirs(secrets.ROOT_DIR)
+os.chdir(secrets.ROOT_DIR)
 
 DATABASE_FILE = "db.csv"
 if not os.path.isfile(DATABASE_FILE):
@@ -54,13 +56,13 @@ def IS_NEW_TO_DB(host, url, date_posted):
 
 def NOTIFY_OF_NEW_URL(new_urls, is_real_run = False):
     if is_real_run:
-        recipients = secrets.recipients
+        recipients = secrets.RECIPIENTS
     else:
         recipients = [
             "scarletjaeger+test@gmail.com",
         ]
 
-    sender = secrets.gmail_user
+    sender = secrets.GMAIL_USER
 
     new_urls = [(url, date_posted) for url, date_posted in new_urls.items()]
     new_urls.sort(key = lambda tup: tup[0])
@@ -89,13 +91,14 @@ def NOTIFY_OF_NEW_URL(new_urls, is_real_run = False):
 
     server = smtplib.SMTP_SSL('smtp.gmail.com', 465)
     server.ehlo()
-    server.login(sender, secrets.gmail_password)
+    server.login(sender, secrets.GMAIL_PASSWORD)
 
     for recipient in recipients:
         msg["To"] = recipient
         server.sendmail(sender, recipient, msg.as_string())
 
     server.close()
+    f.close()
 
 def PROCESS_URLS(host, found_urls):
     NEW_URLS = {}
