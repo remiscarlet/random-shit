@@ -1,6 +1,0 @@
-[submodule "secrets"]
-	path = secrets
-	url = git@github.com:remiscarlet/random-shit_secrets.git
-[submodule "random-shit_secrets"]
-	path = secrets
-	url = git@github.com:remiscarlet/random-shit_secrets.git
