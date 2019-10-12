@@ -7,19 +7,25 @@ import os
 import sys
 import re
 import smtplib
+import datetime
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 
 import secrets.craigslist_secrets as secrets
 
 import craigslist
+import ebay
 
+IS_LIVE_RUN = True if len(sys.argv) > 1 and sys.argv[1] == "--real-run" else False
 
 if not os.path.isdir(secrets.ROOT_DIR):
     os.makedirs(secrets.ROOT_DIR)
 os.chdir(secrets.ROOT_DIR)
 
-DATABASE_FILE = "db.csv"
+if IS_LIVE_RUN:
+    DATABASE_FILE = "db.csv"
+else:
+    DATABASE_FILE = "db.test.csv"
 if not os.path.isfile(DATABASE_FILE):
     with open(DATABASE_FILE, "w") as f:
         f.write("")
@@ -54,8 +60,8 @@ def IS_NEW_TO_DB(host, url, date_posted):
     global DATABASE
     return host not in DATABASE or url not in DATABASE[host]
 
-def NOTIFY_OF_NEW_URL(new_urls, is_real_run = False):
-    if is_real_run:
+def NOTIFY_OF_NEW_URL(new_urls, host, IS_LIVE_RUN = False):
+    if IS_LIVE_RUN:
         recipients = secrets.RECIPIENTS
     else:
         recipients = [
@@ -65,7 +71,10 @@ def NOTIFY_OF_NEW_URL(new_urls, is_real_run = False):
     sender = secrets.GMAIL_USER
 
     new_urls = [(url, date_posted) for url, date_posted in new_urls.items()]
-    new_urls.sort(key = lambda tup: tup[0])
+    new_urls.sort(key = lambda tup: tup[1])
+
+    print "____________"
+    print new_urls[0:5]
 
     email_text = ""
     tmp_handle, tmp_path = tempfile.mkstemp(suffix=".csv")
@@ -83,9 +92,11 @@ def NOTIFY_OF_NEW_URL(new_urls, is_real_run = False):
         attachment = MIMEText(f.read(), _subtype="text") # Hardcode cuz only sending CSVs
     attachment.add_header("Content-Disposition", "attachment", filename="new_flute_listings.csv")
 
+
+    today = str(datetime.date.today())
     msg = MIMEMultipart()
     msg["From"] = sender
-    msg["Subject"] = "New Flute Listings"
+    msg["Subject"] = "%s - %s - New Flute Listings" % (host, today)
     msg.attach(body)
     msg.attach(attachment)
 
@@ -106,10 +117,8 @@ def PROCESS_URLS(host, found_urls):
     for url, date_posted in found_urls.items():
         if IS_NEW_TO_DB(host, url, date_posted):
             WRITE_TO_DB(host, url, date_posted)
-
             NEW_URLS[url] = date_posted
-        else:
-            print "Not a new link... "+url
+            print "FOUND NEW URL POSTED ON %s: %s" % (date_posted, url)
 
     SAVE_DB()
 
@@ -118,12 +127,16 @@ def PROCESS_URLS(host, found_urls):
 ######################
 ## RUN
 
-is_real_run = True if len(sys.argv) > 1 and sys.argv[1] == "--real-run" else False
+MAPPING = {
+        "Craigslist": craigslist.search(),
+        "Ebay": ebay.search(),
+}
 
-NEW_URLS = PROCESS_URLS("craigslist", craigslist.search())
+for host, search_results in MAPPING.items():
+    new_urls = PROCESS_URLS(host, search_results)
 
-if len(NEW_URLS) > 0:
-    NOTIFY_OF_NEW_URL(NEW_URLS, is_real_run)
+    if len(new_urls) > 0:
+        NOTIFY_OF_NEW_URL(new_urls, host, IS_LIVE_RUN)
 
 
 
