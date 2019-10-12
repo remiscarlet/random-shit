@@ -5,7 +5,7 @@ import re
 import datetime
 
 url_list = {
-    "https://www.ebay.com/sch/i.html?_from=R40&_nkw=flute&_sacat=0&_sop=10&rt=nc&_stpos=07039&_sadis=100&LH_PrefLoc=99&_fspt=1&_ipg=200",
+    "https://www.ebay.com/sch/i.html?_from=R40&_nkw=flute+-champagne+-glass+-fluted+-chrome+-endmill+-shank&_sacat=0&_sop=10&rt=nc&_stpos=07039&_sadis=100&LH_PrefLoc=99&_fspt=1&_ipg=200",
 }
 
 def search():
