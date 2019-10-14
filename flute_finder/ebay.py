@@ -4,14 +4,31 @@ import re
 #import dateutil
 import datetime
 
-url_list = {
-    "https://www.ebay.com/sch/i.html?_from=R40&_nkw=flute+-knob+-mills+-drill+-cnc+-champagne+-football+-glass+-fluted+-chrome+-endmill+-shank&_sacat=0&_sop=10&rt=nc&_stpos=07039&_sadis=100&LH_PrefLoc=99&_fspt=1&_ipg=200",
-}
+BASE_URL = "https://www.ebay.com/sch/i.html?_from=R40&_nkw=%s&_sacat=0&_sop=10&rt=nc&_stpos=07039&_sadis=100&LH_PrefLoc=99&_fspt=1&_ipg=200"
+url_params = [
+    {
+        "search": ["flute"],
+        "ignore": ["floppy", "knob", "mills", "carbide", "NPS", "NPT", "high speed", "crystal", "mill", "drill", "cnc", "champagne", "football", "glass", "fluted", "chrome", "endmill", "shank"],
+    },
+]
 
 def search():
     FOUND_URLS = {}
 
-    for url in url_list:
+    for params in url_params:
+        terms = []
+
+        for part in ["search", "ignore"]:
+            query_parts = params[part]
+            query_parts = map(lambda term: term if " " not in term else "\"%s\"" % (term.replace(" ", "+")), query_parts)
+
+            if part == "ignore":
+                query_parts = map(lambda term: "-"+term, query_parts)
+            terms.extend(query_parts)
+
+        query_string = "+".join(terms)
+
+        url = BASE_URL % query_string
         r = requests.get(url)
 
         EBAY_URL_AND_POST_REGEX = "<li class=\"s-item.*?<a href=\"(https:\/\/www.ebay.com\/itm\/[^\"]*?)\".*?s-item__listingDate.*?class=\"BOLD\">(.*?)<\/span>.*?<\/li>"
