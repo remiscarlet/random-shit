@@ -7,6 +7,7 @@ import datetime
 
 url_list = {
     "https://newyork.craigslist.org/search/sss?query=flute+-drill+-champagne+-football+-fluted+-chrome+-shank+-endmill+-cnc+-glass&sort=date&search_distance=75&postal=07030"
+    "https://newyork.craigslist.org/search/sss?query=piccolo+-cd+-book+-funko+-trumpet+-snare+-dragon&sort=date&search_distance=75&postal=07030"
 }
 
 def search():

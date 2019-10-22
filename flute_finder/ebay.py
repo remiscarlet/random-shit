@@ -9,7 +9,11 @@ BASE_URL = "https://www.ebay.com/sch/i.html?_from=R40&_nkw=%s&_sacat=0&_sop=10&r
 url_params = [
     {
         "search": ["flute"],
-        "ignore": ["endmills", "floppy", "knob", "mills", "carbide", "NPS", "NPT", "high speed", "crystal", "mill", "drill", "cnc", "champagne", "football", "glass", "fluted", "chrome", "endmill", "shank"],
+        "ignore": ["cd", "book", "endmills", "floppy", "knob", "mills", "carbide", "NPS", "NPT", "high speed", "crystal", "mill", "drill", "cnc", "champagne", "football", "glass", "fluted", "chrome", "endmill", "shank"],
+    },
+    {
+        "search": ["piccolo"],
+        "ignore": ["book", "cd", "funko", "trumpet", "snare", "dragon"],
     },
 ]
 
