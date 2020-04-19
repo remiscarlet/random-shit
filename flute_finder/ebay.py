@@ -9,7 +9,7 @@ BASE_URL = "https://www.ebay.com/sch/i.html?_from=R40&_nkw=%s&_sacat=0&_sop=10&r
 url_params = [
     {
         "search": ["flute"],
-        "ignore": ["router", "figure", "figures", "milling", "statue", "magic flute", "volume", "sheet", "sheetmusic", "funko", "songbook", "cd", "book", "endmills", "floppy", "knob", "mills", "carbide", "NPS", "NPT", "high speed", "crystal", "mill", "drill", "cnc", "champagne", "football", "glass", "fluted", "chrome", "endmill", "shank"],
+        "ignore": ["auger", "extractor", "extractors", "spiral", "bit", "screw", "router", "figure", "figures", "milling", "statue", "magic flute", "volume", "sheet", "sheetmusic", "funko", "songbook", "cd", "book", "endmills", "floppy", "knob", "mills", "carbide", "NPS", "NPT", "high speed", "crystal", "mill", "drill", "cnc", "champagne", "football", "glass", "fluted", "chrome", "endmill", "shank"],
     },
     {
         "search": ["piccolo"],
@@ -37,11 +37,12 @@ def search():
         r = requests.get(url)
 
         # t⃘͢his i͓̍s bad beca͙̟use you cannot͚̟ parse html wit̜̐h̞̯ reg̰̭ex for ht⃓︠m⃗͆l is not a r᷍e̿ġu̅l̼aͣr̕ l̶ä́n͊g̟úǎg̴e̵ͧ n͇ͩO̟͜ s͙⃟t⃗͠O̓͞P̮ͪ y⃔̐O͗́̎u᷂᷉̕ c᷂̋̅Aͬͤ͠N⃓̛̏t⃒͔͆ S̰ͨͯT̆⃞⃒ͫO̮̯᷂ͥP᷊︣ͦͦ T᷄ͤͧ̐H᷿͔ͧ︣ë́᷃̅̂ P̨͙͐᷆̿ơͧ᷉͗̚N̮̤᷁᷃᷀Ý̛̝̺͗ H͖̊̍͗︡Ë̷͉̯͚́͘ C̤̙̃⃗̅ͅO̧̘̼᷿⃐ͫM̛᷂͕͎̃ͭe⃒͚⃗︣͒̚ṩ⃒̣̖͈̜S̢̃ͫ̓⃐⃛̇
-        EBAY_URL_AND_POST_REGEX = "<li class=\"s-item.*?<a href=\"(https:\/\/www.ebay.com\/itm\/[^\"]*?)\".*?s-item__listingDate.*?class=\"BOLD\">(.*?)<\/span>.*?<\/li>"
+        EBAY_URL_AND_POST_REGEX = "<li class=\"s-item.*?<a.*?href=\"(https:\/\/www.ebay.com\/itm\/[^\"]*?)\".*?s-item__listingDate.*?class=\"BOLD\">(.*?)<\/span>.*?<\/li>"
         matches = re.findall(EBAY_URL_AND_POST_REGEX, r.text, flags=re.DOTALL)
 
         for url, date_posted in matches:
-            date = datetime.datetime.strptime("2019 "+date_posted, "%Y %b-%d %H:%M") # Oct-11 17:53 # I'm sorry this line sucks but it's a hack.
+            year = datetime.date.today().year
+            date = datetime.datetime.strptime(str(year)+" "+date_posted, "%Y %b-%d %H:%M") # Oct-11 17:53 # I'm sorry this line sucks but it's a hack.
             if date > datetime.datetime(2019, 10, 7):
                 FOUND_URLS[url] = date.isoformat()
 
