@@ -64,9 +64,7 @@ def NOTIFY_OF_NEW_URL(new_urls, host, IS_LIVE_RUN = False):
     if IS_LIVE_RUN:
         recipients = secrets.RECIPIENTS
     else:
-        recipients = [
-            "scarletjaeger+test@gmail.com",
-        ]
+        recipients = secrets.RECIPIENTS_TEST
 
     sender = secrets.GMAIL_USER
 
