@@ -115,6 +115,7 @@ def PROCESS_URLS(host, found_urls):
     NEW_URLS = {}
 
     for url, date_posted in found_urls.items():
+        print url
         if IS_NEW_TO_DB(host, url, date_posted):
             WRITE_TO_DB(host, url, date_posted)
             NEW_URLS[url] = date_posted
@@ -128,7 +129,7 @@ def PROCESS_URLS(host, found_urls):
 ## RUN
 
 MAPPING = {
-        "Craigslist": craigslist.search(),
+        #"Craigslist": craigslist.search(),
         "Ebay": ebay.search(),
 }
 
@@ -137,6 +138,8 @@ for host, search_results in MAPPING.items():
 
     if len(new_urls) > 0:
         NOTIFY_OF_NEW_URL(new_urls, host, IS_LIVE_RUN)
+    else:
+        print "No new URLs"
 
 
 

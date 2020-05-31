@@ -35,15 +35,20 @@ def search():
 
         url = BASE_URL % query_string
         r = requests.get(url)
-
+        print url
         # t⃘͢his i͓̍s bad beca͙̟use you cannot͚̟ parse html wit̜̐h̞̯ reg̰̭ex for ht⃓︠m⃗͆l is not a r᷍e̿ġu̅l̼aͣr̕ l̶ä́n͊g̟úǎg̴e̵ͧ n͇ͩO̟͜ s͙⃟t⃗͠O̓͞P̮ͪ y⃔̐O͗́̎u᷂᷉̕ c᷂̋̅Aͬͤ͠N⃓̛̏t⃒͔͆ S̰ͨͯT̆⃞⃒ͫO̮̯᷂ͥP᷊︣ͦͦ T᷄ͤͧ̐H᷿͔ͧ︣ë́᷃̅̂ P̨͙͐᷆̿ơͧ᷉͗̚N̮̤᷁᷃᷀Ý̛̝̺͗ H͖̊̍͗︡Ë̷͉̯͚́͘ C̤̙̃⃗̅ͅO̧̘̼᷿⃐ͫM̛᷂͕͎̃ͭe⃒͚⃗︣͒̚ṩ⃒̣̖͈̜S̢̃ͫ̓⃐⃛̇
-        EBAY_URL_AND_POST_REGEX = "<li class=\"s-item.*?<a.*?href=\"(https:\/\/www.ebay.com\/itm\/[^\"]*?)\".*?s-item__listingDate.*?class=\"BOLD\">(.*?)<\/span>.*?<\/li>"
-        matches = re.findall(EBAY_URL_AND_POST_REGEX, r.text, flags=re.DOTALL)
+        EBAY_URL_AND_POST_REGEX = "<li class=\"s-item.*?<a.*?href=\"?(https:\/\/www.ebay.com\/itm\/[^\">]*?)\"?>.*?s-item__listingDate.*?class=\"?BOLD\"?>(.*?)<\/span>.*?<\/li>"
+        LISTINGS_REGEX = "<li class=\"s-item\s+\" data-view.*?</li>"
 
-        for url, date_posted in matches:
-            year = datetime.date.today().year
-            date = datetime.datetime.strptime(str(year)+" "+date_posted, "%Y %b-%d %H:%M") # Oct-11 17:53 # I'm sorry this line sucks but it's a hack.
-            if date > datetime.datetime(2019, 10, 7):
-                FOUND_URLS[url] = date.isoformat()
+        listings = re.findall(LISTINGS_REGEX, r.text, flags=re.DOTALL)
+        for listing in listings:
+
+            matches = re.findall(EBAY_URL_AND_POST_REGEX, listing, flags=re.DOTALL)
+            for url, date_posted in matches:
+                print url, date_posted
+                year = datetime.date.today().year
+                date = datetime.datetime.strptime(str(year)+" "+date_posted, "%Y %b-%d %H:%M") # Oct-11 17:53 # I'm sorry this line sucks but it's a hack.
+                if date > datetime.datetime(2019, 10, 7):
+                    FOUND_URLS[url] = date.isoformat()
 
     return FOUND_URLS
