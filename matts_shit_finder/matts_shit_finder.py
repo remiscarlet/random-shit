@@ -128,7 +128,6 @@ def PROCESS_URLS(host, found_urls):
 
 MAPPING = {
         "Craigslist": craigslist.search(),
-        "Ebay": ebay.search(),
 }
 
 for host, search_results in MAPPING.items():
