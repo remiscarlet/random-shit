@@ -7,6 +7,6 @@ function mySleep (time) {
 }
 
 // Usage!
-#mySleep(5000).then(() => {
-#    // Stuff here
-#});
+//mySleep(5000).then(() => {
+// //Stuff here
+//});
