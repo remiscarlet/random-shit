@@ -12,7 +12,7 @@ import html
 # - py3.7+
 # - requests library
 
-save_loc = "R:\\Evan Doorbell\\Group 1 Narrated Tape Playlist
+save_loc = "R:\\Evan Doorbell\\Group 1 Narrated Tape Playlist"
 
 
 url = "http://www.evan-doorbell.com/production/group1.htm"
