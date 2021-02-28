@@ -36,7 +36,7 @@ for fileformat in [".mp3", ".flac"]:
 	regex = rf'<tr>\s+<td width="289".*?font size="2">(.*?)<\/font>.*?<a href="(\w+\{fileformat})">.*?<\/tr>'
 	dest_folder = os.path.join(save_loc, fileformat.strip("."))
 	if not os.path.exists(dest_folder):
-		os.mkdir(dest_folder)
+		os.mkdirs(dest_folder, exist_ok=True)
 
 	i = 1
 	for find in re.findall(regex, html_raw, re_flags):
