@@ -101,42 +101,72 @@ class Entity:
 
     def __init__(self, symbol: str, color: int, entity_type: EntityType):
         global TRUE_BOARD_WIDTH, TRUE_BOARD_HEIGHT
+
         self.TRUE_BOARD_WIDTH = TRUE_BOARD_WIDTH
         self.TRUE_BOARD_HEIGHT = TRUE_BOARD_HEIGHT
+
+        global BOARD_WIDTH, BOARD_HEIGHT
+        self.BOARD_WIDTH = BOARD_WIDTH
+        self.BOARD_HEIGHT = BOARD_HEIGHT
 
         self.symbol = symbol
         self.color = color
         self.entity_type = entity_type
 
     def setInitialPosition(self, y, x):
+        """
+        This function assumes BOARD_WIDTH/HEIGHT as the bounds and _not_ TRUE_BOARD_WIDTH/HEIGHT
+        """
+        logger.debug(f"Setting initial position: {y}, {x} - is true size")
         self.position = (y, x)
+
+    def __isOutOfBounds(self, y, x, use_true_size):
+        width = self.TRUE_BOARD_WIDTH if use_true_size else self.BOARD_WIDTH
+        height = self.TRUE_BOARD_HEIGHT if use_true_size else self.BOARD_HEIGHT
+
+        logger.debug(f"{x} <= 0; {x} >= {width - 1}; {y} <= 0; {y} >= {height - 1}")
+
+        return x <= 0 or x >= width - 1 or y <= 0 or y >= height - 1
 
     """
     All move* methods will error out if the destination
     of the move is either already occupied or out of bounds.
     """
 
+    def canMoveLeft(self):
+        return self.__canMove(0, -1)
+
     def moveLeft(self, board):
         self.__move(board, 0, -1)
+
+    def canMoveRight(self):
+        return self.__canMove(0, +1)
 
     def moveRight(self, board):
         self.__move(board, 0, +1)
 
+    def canMoveUp(self):
+        return self.__canMove(-1, 0)
+
     def moveUp(self, board):
         self.__move(board, -1, 0)  # Curses uses quadrant IV instead of the usual I
+
+    def canMoveDown(self):
+        return self.__canMove(+1, 0)
 
     def moveDown(self, board):
         self.__move(board, +1, 0)
 
+    def __canMove(self, dy, dx):
+        old_y, old_x = self.position
+        new_y, new_x = (old_y + dy, old_x + dx)
+        return not self.__isOutOfBounds(new_y, new_x, use_true_size=False)
+
     def __move(self, board, dy, dx):
         old_y, old_x = self.position
         new_y, new_x = (old_y + dy, old_x + dx)
-        if (
-            new_x <= 0
-            or new_x >= self.TRUE_BOARD_WIDTH - 1
-            or new_y <= 0
-            or new_y >= self.TRUE_BOARD_HEIGHT - 1
-        ):
+
+        if self.__isOutOfBounds(new_y, new_x, use_true_size=False):
             raise Exception("Entity is being moved out of bounds!")
 
         if board.getPos(new_y, new_x) != None:
@@ -298,7 +328,7 @@ class Board:
         """
 
         # Place player
-        player_y = self.BOARD_HEIGHT - 1
+        player_y = self.BOARD_HEIGHT - 1 - 1
         player_x = self.BOARD_WIDTH // 2
         self.setPos(player_y, player_x, player)
         player.setInitialPosition(player_y, player_x)
@@ -339,13 +369,15 @@ class Board:
         As such this is a helper function to update self.board but using the "game coordinates"
         ie ignoring the borders
         """
-        assert y >= 0 and y < self.BOARD_HEIGHT
-        assert x >= 0 and x < self.BOARD_WIDTH
 
-        true_y = y + self.BORDER_WIDTH
-        true_x = x + self.BORDER_WIDTH
+        y += self.BORDER_WIDTH
+        x += self.BORDER_WIDTH
 
-        self.board[true_y][true_x] = entity
+        logger.debug(f"Setting true pos: {y},{x}")
+        assert y > 0 and y < self.TRUE_BOARD_HEIGHT - 1
+        assert x > 0 and x < self.TRUE_BOARD_WIDTH - 1
+
+        self.board[y][x] = entity
 
 
 class SpaceInvaders:
@@ -455,7 +487,7 @@ class SpaceInvaders:
         target_tick_dur_milli = 60 * 1000 / self.TICKS_PER_MINUTE
         curr_tick_start_milli = time.time_ns()
 
-        min_delay = 0.5  # seconds
+        min_delay = 0.1  # seconds
 
         while True:
             self.inputManager.storeInput()
@@ -475,10 +507,10 @@ class SpaceInvaders:
             time.sleep(min_delay)
 
     def updatePlayer(self, pressed_key: int) -> None:
-        if pressed_key == ord("a"):
+        if pressed_key == ord("a") and self.player.canMoveLeft():
             logger.info("Moving ship to the left")
             self.player.moveLeft(self.board)
-        elif pressed_key == ord("d"):
+        elif pressed_key == ord("d") and self.player.canMoveRight():
             logger.info("Moving ship to the right")
             self.player.moveRight(self.board)
 
