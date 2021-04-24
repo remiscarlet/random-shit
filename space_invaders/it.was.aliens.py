@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import copy
 import enum
 import time
 import curses
@@ -20,10 +21,14 @@ Currently Does:
     - Configurable enemy count
     - Configurable tick length
     - Border on game board
-    - Quitting
+    - Quitting ('Q')
+    - Pausing ('P')
+    - Player Movement ('A' or 'D')
+    - Enemy Movement (Snakes down from top to bot)
 
 Features To Implement:
     - Shooting/Destroying enemies
+    - Score
 
 Notes/Assumptions:
     - Will error out if screen size is smaller than grid size
@@ -32,17 +37,20 @@ Notes/Assumptions:
 Known Bugs:
     - If you hold a key configured with InputManager, initial keypress is recognized, then
       the key is seen as "released", but then will correctly detect it as being "held" again soon thereafter.
-
+        - Wait, this is probably just my OS's key repeat delay and not the code...
+        - Oh, that's probably why proper input managers use lower level libraries and not literally keystrokes...
 """
 
 ###########
 # Configs #
 ###########
 
-BOARD_HEIGHT: int = 25
+BOARD_HEIGHT: int = 5
 BOARD_WIDTH: int = 25
 ENEMY_COUNT: int = BOARD_WIDTH * 2
 TICKS_PER_MINUTE: int = 120
+
+TICKS_PER_ENEMY_MOVEMENT = 2
 
 LOG_PATH = "it.was.aliens.log"
 
@@ -99,6 +107,8 @@ class Entity:
 
     position: Tuple[int, int]  # y,x as per curses format
 
+    ticks_since_last_move: int = 0
+
     def __init__(self, symbol: str, color: int, entity_type: EntityType):
         global TRUE_BOARD_WIDTH, TRUE_BOARD_HEIGHT
 
@@ -109,9 +119,20 @@ class Entity:
         self.BOARD_WIDTH = BOARD_WIDTH
         self.BOARD_HEIGHT = BOARD_HEIGHT
 
+        global TICKS_PER_ENEMY_MOVEMENT
+        self.TICKS_PER_ENEMY_MOVEMENT = TICKS_PER_ENEMY_MOVEMENT
+
         self.symbol = symbol
         self.color = color
         self.entity_type = entity_type
+
+    def __str__(self):
+        try:
+            return (
+                f"{EntityType(self.entity_type).name} - {self.symbol} - {self.position}"
+            )
+        except AttributeError:
+            return f"{EntityType(self.entity_type).name} - {self.symbol} - NoPos"
 
     def setInitialPosition(self, y, x):
         """
@@ -120,17 +141,74 @@ class Entity:
         logger.debug(f"Setting initial position: {y}, {x} - is true size")
         self.position = (y, x)
 
-    def __isOutOfBounds(self, y, x, use_true_size):
-        width = self.TRUE_BOARD_WIDTH if use_true_size else self.BOARD_WIDTH
-        height = self.TRUE_BOARD_HEIGHT if use_true_size else self.BOARD_HEIGHT
+    def getPos(self):
+        try:
+            return self.position
+        except:
+            raise Exception(
+                "This Entity doesn't have a position set but getPos() was called!"
+            )
 
-        logger.debug(f"{x} <= 0; {x} >= {width - 1}; {y} <= 0; {y} >= {height - 1}")
+    def genNextDeltas(self, curr_y: int, curr_x: int) -> Tuple[int, int]:
+        """
+        Assumes the correct "next pos" is open and valid to move to.
+        """
 
-        return x <= 0 or x >= width - 1 or y <= 0 or y >= height - 1
+        logger.debug(f"Generating next deltas from pos: {curr_y},{curr_x}")
+
+        dx = -1 if curr_y % 2 == 1 else +1  # Left if odd row, Right if even row
+
+        if dx == -1:
+            can_move_horizontal = self.canMoveLeft()
+        else:
+            can_move_horizontal = self.canMoveRight()
+
+        if not can_move_horizontal:
+            if not self.canMoveDown():
+                raise Exception(
+                    "genNextPos() determined moving down is impossible! (Game over?)"
+                )
+            logger.debug(f"Next delta: {+1},{0}")
+            return (+1, 0)
+        else:
+            logger.debug(f"Next delta: {0},{dx}")
+            return (0, dx)
+
+    def moveToNextPos(self, board):
+        """
+        Assumes this method is called on Entity every tick.
+        """
+        if self.ticks_since_last_move > self.TICKS_PER_ENEMY_MOVEMENT:
+            old_y, old_x = self.position
+            dy, dx = self.genNextDeltas(old_y, old_x)
+            new_y, new_x = old_y + dy, old_x + dx
+
+            if board.isPosOccupied(new_y, new_x):
+                raise Exception(
+                    f"Tried moving entity but next pos was occupied! New pos: {new_y},{new_x}"
+                )
+
+            self.__move(board, dy, dx)
+            self.ticks_since_last_move = 0
+
+        self.ticks_since_last_move += 1
+
+    def __isOutOfBounds(self, y, x):
+        """
+        Assumes non-true boardsize. Ie, self.BOARD_WIDTH/HEIGHT instead of TRUE_BOARD_WIDTH/HEIGHT
+        """
+
+        logger.debug(
+            f"x:{x} < 0 or x:{x} > {self.BOARD_WIDTH - 1} or y:{y} < 0 or y:{y} > {self.BOARD_HEIGHT - 1}"
+        )
+
+        return x < 0 or x > self.BOARD_WIDTH - 1 or y < 0 or y > self.BOARD_HEIGHT - 1
 
     """
     All move* methods will error out if the destination
     of the move is either already occupied or out of bounds.
+
+    All canMove* functions do _not_ check if the next pos is occupied.
     """
 
     def canMoveLeft(self):
@@ -160,22 +238,23 @@ class Entity:
     def __canMove(self, dy, dx):
         old_y, old_x = self.position
         new_y, new_x = (old_y + dy, old_x + dx)
-        return not self.__isOutOfBounds(new_y, new_x, use_true_size=False)
+        return not self.__isOutOfBounds(new_y, new_x)
 
     def __move(self, board, dy, dx):
         old_y, old_x = self.position
         new_y, new_x = (old_y + dy, old_x + dx)
 
-        if self.__isOutOfBounds(new_y, new_x, use_true_size=False):
+        if self.__isOutOfBounds(new_y, new_x):
             raise Exception("Entity is being moved out of bounds!")
 
-        if board.getPos(new_y, new_x) != None:
+        if board.isPosOccupied(new_y, new_x):
+            logger.debug(f"{board.getEntityAtPos(new_y, new_x)}")
             raise Exception("Destination cell is already occupied!")
 
         logger.info(f"Moved from old pos {old_y},{old_x} to new pos {new_y},{new_x}")
 
-        board.setPos(old_y, old_x, None)
-        board.setPos(new_y, new_x, self)
+        board.setEntityAtPos(old_y, old_x, None)
+        board.setEntityAtPos(new_y, new_x, self)
 
         self.position = (new_y, new_x)
 
@@ -280,6 +359,8 @@ class InputManager:
 class Board:
     board: List[List[Optional[Entity]]]
 
+    enemies_alive: List[Entity] = []
+
     def __init__(self, player: Entity, enemies: List[Entity], num_enemies: int) -> None:
         self.__copyGlobalSettings()
         self.__initializeBoard()
@@ -328,16 +409,29 @@ class Board:
         """
 
         # Place player
-        player_y = self.BOARD_HEIGHT - 1 - 1
+        player_y = self.BOARD_HEIGHT - 1
         player_x = self.BOARD_WIDTH // 2
-        self.setPos(player_y, player_x, player)
+        self.setEntityAtPos(player_y, player_x, player)
         player.setInitialPosition(player_y, player_x)
 
+        enemy_y, enemy_x = 0, 0
         for i in range(num_enemies):
-            enemy = random.choice(enemies)
-            enemy_y = i // self.BOARD_WIDTH
-            enemy_x = i % self.BOARD_WIDTH
-            self.setPos(enemy_y, enemy_x, enemy)
+            enemy = copy.deepcopy(
+                random.choice(enemies)
+            )  # Deep copy to ensure no shared refs
+
+            self.setEntityAtPos(enemy_y, enemy_x, enemy)
+            enemy.setInitialPosition(enemy_y, enemy_x)
+
+            dy, dx = enemy.genNextDeltas(enemy_y, enemy_x)
+            enemy_y += dy
+            enemy_x += dx
+
+            # If one images the enemies as a line that snakes at the top
+            # of the screen, enemies_alive is ordered FILO
+            self.enemies_alive.append(enemy)
+
+        logger.info("===== Done populating initial entity positions.")
 
     def __copyGlobalSettings(self) -> None:
         """
@@ -358,10 +452,23 @@ class Board:
     def getBoard(self) -> List[List[Optional[Entity]]]:
         return self.board
 
-    def getPos(self, y: int, x: int) -> Optional[Entity]:
+    def getAliveEnemies(self) -> List[Entity]:
+        return self.enemies_alive
+
+    def getEntityAtPos(self, y: int, x: int) -> Optional[Entity]:
+        """
+        Assumes non-true board width/height
+        """
+
+        y += self.BORDER_WIDTH
+        x += self.BORDER_WIDTH
+
         return self.board[y][x]
 
-    def setPos(self, y: int, x: int, entity: Optional[Entity]) -> None:
+    def isPosOccupied(self, y: int, x: int) -> bool:
+        return self.getEntityAtPos(y, x) != None
+
+    def setEntityAtPos(self, y: int, x: int, entity: Optional[Entity]) -> None:
         """
         While we have a config for BOARD_WIDTH/HEIGHT, we also draw a border which
         makes us have a true width/height greater than the supplied values (unless border width = 0)
@@ -515,7 +622,8 @@ class SpaceInvaders:
             self.player.moveRight(self.board)
 
     def updateEnemies(self) -> None:
-        pass
+        for enemy in reversed(self.board.getAliveEnemies()):
+            enemy.moveToNextPos(self.board)
 
     def togglePause(self) -> None:
         self.is_paused = not self.is_paused
